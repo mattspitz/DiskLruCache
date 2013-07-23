@@ -50,17 +50,16 @@ public final class DiskLruCacheTest {
   @Before public void setUp() throws Exception {
     javaTmpDir = System.getProperty("java.io.tmpdir");
     cacheDir = new File(javaTmpDir, "DiskLruCacheTest");
+    FileUtils.deleteQuietly(cacheDir);
     cacheDir.mkdir();
     journalFile = new File(cacheDir, JOURNAL_FILE);
     journalBkpFile = new File(cacheDir, JOURNAL_FILE_BACKUP);
-    for (File file : cacheDir.listFiles()) {
-      file.delete();
-    }
     cache = DiskLruCache.open(cacheDir, appVersion, 2, Integer.MAX_VALUE);
   }
 
   @After public void tearDown() throws Exception {
     cache.close();
+    FileUtils.deleteQuietly(cacheDir);
   }
 
   @Test public void emptyCache() throws Exception {
@@ -874,6 +873,20 @@ public final class DiskLruCacheTest {
   @Test public void aggressiveClearingHandlesRead() throws Exception {
     FileUtils.deleteDirectory(cacheDir);
     assertThat(cache.get("a")).isNull();
+  }
+
+  @Test public void clearRemovesEverythingFromCache() throws Exception {
+    set("k1", "A", "B");
+    assertValue("k1", "A", "B");
+
+    cache.evictAll();
+    assertAbsent("k1");
+    assertThat(cache.size()).isZero();
+    assertThat(cache.isClosed()).isFalse();
+
+    // Make sure we are still in a writable state
+    set("k1", "C", "D");
+    assertValue("k1", "C", "D");
   }
 
   private void assertJournalEquals(String... expectedBodyLines) throws Exception {

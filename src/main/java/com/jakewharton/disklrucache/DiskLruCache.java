@@ -654,6 +654,20 @@ public final class DiskLruCache implements Closeable {
     Util.deleteContents(directory);
   }
 
+  /**
+   * Deletes all of the stored values in the cache. This will delete
+   * all files in the cache directory including files that weren't created by
+   * the cache.
+   */
+  public synchronized void evictAll() throws IOException {
+    Util.deleteContents(directory);
+    redundantOpCount = 0;
+    size = 0;
+    nextSequenceNumber = 0;
+    lruEntries.clear();
+    rebuildJournal();
+  }
+
   private void validateKey(String key) {
     Matcher matcher = LEGAL_KEY_PATTERN.matcher(key);
     if (!matcher.matches()) {
